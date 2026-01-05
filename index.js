@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const qs = require("qs");
 
 const app = express();
+app.use(express.json());               // ← global JSON middleware (v5 safe)
 const port = process.env.PORT || 3000;
 
 /* ===============================
@@ -48,13 +49,14 @@ async function getQBAccessToken() {
 }
 
 /* ===============================
-   BASIC HEALTH CHECK
+   HEALTH
 =================================*/
 
 app.get("/", (_, res) => res.send("Maneframe Finance Bridge Alive 🦾"));
+app.get("/__ping", (_, res) => res.json({ ok: true, ping: "pong", time: new Date().toISOString() }));
 
 /* ===============================
-   OAUTH START
+   OAUTH
 =================================*/
 
 app.get("/auth/qb/start", (req, res) => {
@@ -68,25 +70,18 @@ app.get("/auth/qb/start", (req, res) => {
     state
   };
 
-  res.redirect(
-    `https://appcenter.intuit.com/connect/oauth2?${qs.stringify(params)}`
-  );
+  res.redirect(`https://appcenter.intuit.com/connect/oauth2?${qs.stringify(params)}`);
 });
-
-/* ===============================
-   OAUTH CALLBACK
-=================================*/
 
 app.get("/auth/qb/callback", async (req, res) => {
   try {
     console.log("QB REALM ID:", req.query.realmId);
-    const authCode = req.query.code;
 
     const r = await axios.post(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
       qs.stringify({
         grant_type: "authorization_code",
-        code: authCode,
+        code: req.query.code,
         redirect_uri: process.env.QB_REDIRECT_URI
       }),
       {
@@ -113,10 +108,10 @@ app.get("/auth/qb/callback", async (req, res) => {
 });
 
 /* ===============================
-   VENDOR LOOKUP
+   LOOKUPS
 =================================*/
 
-app.get("/qb/vendors", async (req, res) => {
+app.get("/qb/vendors", async (_, res) => {
   try {
     const token = await getQBAccessToken();
     const realm = process.env.QB_REALM_ID;
@@ -124,12 +119,8 @@ app.get("/qb/vendors", async (req, res) => {
     const r = await axios.get(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
-        params: { query: "select Id, DisplayName from Vendor",
-	  minorversion:65 },
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json"
-        }
+        params: { query: "select Id, DisplayName from Vendor", minorversion: 65 },
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
       }
     );
 
@@ -140,17 +131,34 @@ app.get("/qb/vendors", async (req, res) => {
   }
 });
 
+app.get("/qb/accounts", async (_, res) => {
+  try {
+    const token = await getQBAccessToken();
+    const realm = process.env.QB_REALM_ID;
+
+    const r = await axios.get(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
+      {
+        params: { query: "select Id, Name, AccountType from Account", minorversion: 65 },
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
+      }
+    );
+
+    res.json(r.data.QueryResponse.Account || []);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Account lookup failed");
+  }
+});
+
 /* ===============================
-   BILL ENGINE — CREATE QB BILL
+   BILL ENGINE
 =================================*/
 
-app.post("/qb/bills", express.json(), async (req, res) => {
+app.post("/qb/bills", async (req, res) => {
   try {
-    const { vendorId, amount, memo, dueDate } = req.body;
-
-    if (!vendorId || !amount) {
-      return res.status(400).send("vendorId and amount required");
-    }
+    const { vendorId, amount, memo } = req.body;
+    if (!vendorId || !amount) return res.status(400).send("vendorId and amount required");
 
     const token = await getQBAccessToken();
     const realm = process.env.QB_REALM_ID;
@@ -172,13 +180,7 @@ app.post("/qb/bills", express.json(), async (req, res) => {
     const qbRes = await axios.post(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
       billPayload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        }
-      }
+      { headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" } }
     );
 
     res.json(qbRes.data);
@@ -188,37 +190,8 @@ app.post("/qb/bills", express.json(), async (req, res) => {
   }
 });
 
-app.get("/__version", (req, res) => {
-  res.json({
-    ok: true,
-    service: "mf-finance-bridge",
-    renderCommit: process.env.RENDER_GIT_COMMIT || null,
-    node: process.version,
-    time: new Date().toISOString()
-  });
-});
-
-app.get("/__routes", (req, res) => {
-  const routes = [];
-  try {
-    app._router.stack.forEach((layer) => {
-      if (layer.route && layer.route.path) {
-        const methods = Object.keys(layer.route.methods)
-          .filter((m) => layer.route.methods[m])
-          .map((m) => m.toUpperCase());
-        routes.push({ path: layer.route.path, methods });
-      }
-    });
-  } catch (e) {}
-  res.json({ count: routes.length, routes });
-});
-
-app.get("/__ping", (req, res) => {
-  res.json({ ok: true, ping: "pong", time: new Date().toISOString() });
-});
-
 /* ===============================
-   SERVER START
+   START
 =================================*/
 
 app.listen(port, () => console.log("MF Finance Bridge running on", port));
