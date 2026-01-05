@@ -7,17 +7,19 @@ app.get("/", (_, res) => res.send("Maneframe Finance Bridge Alive ✅"));
 const port = process.env.PORT || 3000;
 const crypto = require("crypto");
 const qs = require("qs");
+const QB_BASE = "https://quickbooks.api.intuit.com";
 
 app.get("/auth/qb/start", (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
 
   const params = {
-    client_id: process.env.QB_CLIENT_ID,
-    response_type: "code",
-    scope: "com.intuit.quickbooks.accounting",
-    redirect_uri: process.env.QB_REDIRECT_URI,
-    state
-  };
+  client_id: process.env.QB_CLIENT_ID,
+  response_type: "code",
+  scope: "com.intuit.quickbooks.accounting",
+  redirect_uri: process.env.QB_REDIRECT_URI,
+  state,
+  response_mode: "form_post"
+};
 
   const url = `https://appcenter.intuit.com/connect/oauth2?${qs.stringify(params)}`;
   res.redirect(url);
