@@ -79,6 +79,7 @@ app.get("/auth/qb/start", (req, res) => {
 
 app.get("/auth/qb/callback", async (req, res) => {
   try {
+    console.log("QB REALM ID:", req.query.realmId);
     const authCode = req.query.code;
 
     const r = await axios.post(
