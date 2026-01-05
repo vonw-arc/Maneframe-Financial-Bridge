@@ -196,11 +196,16 @@ app.post("/qb/bills", express.json(), async (req, res) => {
     );
 
     res.json(qbRes.data);
-  } catch (e) {
-    console.error("QB BILL ERROR FULL:", JSON.stringify(e.response?.data || e.message, null, 2));
-    res.status(500).send("Bill creation failed");
+    } catch (e) {
+    console.log("====== QB RAW ERROR ======");
+    console.log(JSON.stringify(e.response?.data, null, 2));
+    console.log("==========================");
+    res.status(500).json({
+      ok: false,
+      qb: e.response?.data || null,
+      msg: e.message
+    });
   }
-});
 
 /* ===============================
    START
