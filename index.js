@@ -140,6 +140,55 @@ app.get("/qb/vendors", async (req, res) => {
 });
 
 /* ===============================
+   BILL ENGINE — CREATE QB BILL
+=================================*/
+
+app.post("/qb/bills", express.json(), async (req, res) => {
+  try {
+    const { vendorId, amount, memo, dueDate } = req.body;
+
+    if (!vendorId || !amount) {
+      return res.status(400).send("vendorId and amount required");
+    }
+
+    const token = await getQBAccessToken();
+    const realm = process.env.QB_REALM_ID;
+
+    const billPayload = {
+      VendorRef: { value: vendorId },
+      Line: [
+        {
+          Amount: Number(amount),
+          DetailType: "AccountBasedExpenseLineDetail",
+          AccountBasedExpenseLineDetail: {
+            AccountRef: { value: "7" } // Sandbox default expense account
+          },
+          Description: memo || "Maneframe Bill"
+        }
+      ],
+      DueDate: dueDate || undefined
+    };
+
+    const r = await axios.post(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill`,
+      billPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    res.json(r.data);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Bill creation failed");
+  }
+});
+
+/* ===============================
    SERVER START
 =================================*/
 
