@@ -150,6 +150,29 @@ app.post("/qb/bills", async (req, res) => {
   }
 });
 
+app.get("/qb/vendors", async (req, res) => {
+  try {
+    const accessToken = await getQBAccessToken();
+    const realmId = process.env.QB_REALM_ID;
+
+    const r = await axios.get(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}/query`,
+      {
+        params: { query: "select Id, DisplayName from Vendor" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    res.json(r.data.QueryResponse.Vendor || []);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Vendor query failed");
+  }
+});
+
 // =======================
 // SERVER START
 // =======================
