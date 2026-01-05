@@ -156,7 +156,7 @@ app.get("/qb/accounts", async (_, res) => {
 =================================*/
 app.post("/qb/bills", express.json(), async (req, res) => {
   try {
-    const { vendorId, amount, memo, dueDate } = req.body;
+    const { vendorId, amount, memo } = req.body;
 
     if (!vendorId || !amount) {
       return res.status(400).send("vendorId and amount required");
@@ -167,13 +167,15 @@ app.post("/qb/bills", express.json(), async (req, res) => {
 
     const billPayload = {
       VendorRef: { value: vendorId },
+      APAccountRef: { value: "33" }, // Accounts Payable
+      TxnDate: new Date().toISOString().split("T")[0],
       Line: [
         {
           Amount: Number(amount),
           DetailType: "AccountBasedExpenseLineDetail",
           Description: memo || "Maneframe Trucking",
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "80" }   // Cost of Goods Sold
+            AccountRef: { value: "80" }
           }
         }
       ]
