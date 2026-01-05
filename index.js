@@ -111,6 +111,46 @@ async function getQBAccessToken() {
 }
 
 // =======================
+// CREATE BILL
+// =======================
+app.post("/qb/bills", async (req, res) => {
+  try {
+    const token = await getQBAccessToken();
+
+    const bill = req.body; // { vendorId, amount, memo }
+
+    const qbRes = await axios.post(
+      `${QB_BASE}/v3/company/${QB.realmId}/bill`,
+      {
+        VendorRef: { value: bill.vendorId },
+        Line: [
+          {
+            Amount: bill.amount,
+            DetailType: "AccountBasedExpenseLineDetail",
+            AccountBasedExpenseLineDetail: {
+              AccountRef: { value: "79" } // <-- Temporary expense account (we'll map later)
+            },
+            Description: bill.memo
+          }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        }
+      }
+    );
+
+    res.json(qbRes.data);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Bill creation failed");
+  }
+});
+
+// =======================
 // SERVER START
 // =======================
 const port = process.env.PORT || 3000;
