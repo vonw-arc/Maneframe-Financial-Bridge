@@ -1,34 +1,59 @@
 require("dotenv").config();
 const express = require("express");
+const axios = require("axios");
+const qs = require("qs");
+const crypto = require("crypto");
 
 const app = express();
-app.get("/", (_, res) => res.send("Maneframe Finance Bridge Alive ✅"));
+app.use(express.json());
 
-const port = process.env.PORT || 3000;
-const crypto = require("crypto");
-const qs = require("qs");
-const QB_BASE = "https://quickbooks.api.intuit.com";
+const QB_BASE = "https://sandbox-quickbooks.api.intuit.com";
 
+// =======================
+// SECURE TOKEN STORE
+// =======================
+let QB = {
+  realmId: null,
+  access_token: null,
+  refresh_token: null,
+  expires_at: null
+};
+
+function setQBToken(t) {
+  QB.access_token = t.access_token;
+  QB.refresh_token = t.refresh_token;
+  QB.expires_at = Date.now() + (t.expires_in * 1000);
+}
+
+// =======================
+// HEALTH CHECK
+// =======================
+app.get("/", (_, res) => res.send("Maneframe Finance Bridge Online 🦾"));
+
+// =======================
+// OAUTH START
+// =======================
 app.get("/auth/qb/start", (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
 
   const params = {
-  client_id: process.env.QB_CLIENT_ID,
-  response_type: "code",
-  scope: "com.intuit.quickbooks.accounting",
-  redirect_uri: process.env.QB_REDIRECT_URI,
-  state,
-  response_mode: "form_post"
-};
+    client_id: process.env.QB_CLIENT_ID,
+    response_type: "code",
+    scope: "com.intuit.quickbooks.accounting",
+    redirect_uri: process.env.QB_REDIRECT_URI,
+    state
+  };
 
-  const url = `https://appcenter.intuit.com/connect/oauth2?${qs.stringify(params)}`;
-  res.redirect(url);
+  res.redirect(`https://appcenter.intuit.com/connect/oauth2?${qs.stringify(params)}`);
 });
-const axios = require("axios");
 
+// =======================
+// OAUTH CALLBACK
+// =======================
 app.get("/auth/qb/callback", async (req, res) => {
   try {
     const authCode = req.query.code;
+    const realmId = req.query.realmId;
 
     const tokenRes = await axios.post(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
@@ -41,19 +66,52 @@ app.get("/auth/qb/callback", async (req, res) => {
         headers: {
           Authorization:
             "Basic " +
-            Buffer.from(
-              process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET
-            ).toString("base64"),
+            Buffer.from(process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET).toString("base64"),
           "Content-Type": "application/x-www-form-urlencoded"
         }
       }
     );
 
-    // TEMP: show tokens (we'll secure next)
-    res.json(tokenRes.data);
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send("QB OAuth failed");
+    QB.realmId = realmId;
+    setQBToken(tokenRes.data);
+
+    res.send("QB Connected Successfully 🦾 You may close this window.");
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("QB OAuth Failed");
   }
 });
+
+// =======================
+// AUTO TOKEN REFRESH
+// =======================
+async function getQBAccessToken() {
+  if (QB.access_token && Date.now() < QB.expires_at - 60000) {
+    return QB.access_token;
+  }
+
+  const tokenRes = await axios.post(
+    "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+    qs.stringify({
+      grant_type: "refresh_token",
+      refresh_token: QB.refresh_token
+    }),
+    {
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from(process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    }
+  );
+
+  setQBToken(tokenRes.data);
+  return QB.access_token;
+}
+
+// =======================
+// SERVER START
+// =======================
+const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("MF Finance Bridge running on", port));
