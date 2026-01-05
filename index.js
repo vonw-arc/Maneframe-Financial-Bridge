@@ -152,13 +152,15 @@ app.get("/qb/accounts", async (_, res) => {
 });
 
 /* ===============================
-   BILL ENGINE
+   BILL ENGINE — CREATE QB BILL
 =================================*/
-
-app.post("/qb/bills", async (req, res) => {
+app.post("/qb/bills", express.json(), async (req, res) => {
   try {
-    const { vendorId, amount, memo } = req.body;
-    if (!vendorId || !amount) return res.status(400).send("vendorId and amount required");
+    const { vendorId, amount, memo, dueDate } = req.body;
+
+    if (!vendorId || !amount) {
+      return res.status(400).send("vendorId and amount required");
+    }
 
     const token = await getQBAccessToken();
     const realm = process.env.QB_REALM_ID;
@@ -169,10 +171,10 @@ app.post("/qb/bills", async (req, res) => {
         {
           Amount: Number(amount),
           DetailType: "AccountBasedExpenseLineDetail",
+          Description: memo || "Maneframe Trucking",
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "PUT_REAL_EXPENSE_ACCOUNT_ID_HERE" }
-          },
-          Description: memo || "Maneframe Bill"
+            AccountRef: { value: "80" }   // Cost of Goods Sold
+          }
         }
       ]
     };
@@ -180,12 +182,18 @@ app.post("/qb/bills", async (req, res) => {
     const qbRes = await axios.post(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
       billPayload,
-      { headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" } }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        }
+      }
     );
 
     res.json(qbRes.data);
   } catch (e) {
-    console.error(e.response?.data || e.message);
+    console.error("QB BILL ERROR:", e.response?.data || e.message);
     res.status(500).send("Bill creation failed");
   }
 });
