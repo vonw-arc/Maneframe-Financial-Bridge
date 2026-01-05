@@ -162,49 +162,29 @@ app.post("/qb/bills", express.json(), async (req, res) => {
           Amount: Number(amount),
           DetailType: "AccountBasedExpenseLineDetail",
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "7" } // Sandbox default expense account
+            AccountRef: { value: "PUT_REAL_EXPENSE_ACCOUNT_ID_HERE" }
           },
           Description: memo || "Maneframe Bill"
         }
-      ],
-      DueDate: dueDate || undefined
+      ]
     };
 
-    cconst r = await axios.post(
-  `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
-  billPayload,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-      "Content-Type": "application/json"
-    }
-  }
-);
-
-app.get("/qb/accounts", async (req, res) => {
-  try {
-    const token = await getQBAccessToken();
-    const realm = process.env.QB_REALM_ID;
-
-    const r = await axios.get(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
+    const qbRes = await axios.post(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
+      billPayload,
       {
-        params: {
-          query: "select Id, Name, AccountType from Account",
-          minorversion: 65
-        },
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: "application/json"
+          Accept: "application/json",
+          "Content-Type": "application/json"
         }
       }
     );
 
-    res.json(r.data.QueryResponse.Account || []);
+    res.json(qbRes.data);
   } catch (e) {
     console.error(e.response?.data || e.message);
-    res.status(500).send("Account lookup failed");
+    res.status(500).send("Bill creation failed");
   }
 });
 
