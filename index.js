@@ -154,7 +154,7 @@ app.get("/qb/accounts", async (_, res) => {
 /* ===============================
    BILL ENGINE — CREATE QB BILL
 =================================*/
-app.post("/qb/bills", express.json(), async (req, res) => {
+app.post("/qb/bills", async (req, res) => {
   try {
     const { vendorId, amount, memo } = req.body;
 
@@ -196,7 +196,7 @@ app.post("/qb/bills", express.json(), async (req, res) => {
     );
 
     res.json(qbRes.data);
-    } catch (e) {
+  } catch (e) {
     console.log("====== QB RAW ERROR ======");
     console.log(JSON.stringify(e.response?.data, null, 2));
     console.log("==========================");
@@ -206,6 +206,7 @@ app.post("/qb/bills", express.json(), async (req, res) => {
       msg: e.message
     });
   }
+});
 
 /* ===============================
    START
