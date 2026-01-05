@@ -124,7 +124,8 @@ app.get("/qb/vendors", async (req, res) => {
     const r = await axios.get(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
-        params: { query: "select Id, DisplayName from Vendor" },
+        params: { query: "select Id, DisplayName from Vendor",
+	  minorversion:65 },
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json"
@@ -169,24 +170,17 @@ app.post("/qb/bills", express.json(), async (req, res) => {
       DueDate: dueDate || undefined
     };
 
-    const r = await axios.post(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill`,
-      billPayload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        }
-      }
-    );
-
-    res.json(r.data);
-  } catch (e) {
-    console.error(e.response?.data || e.message);
-    res.status(500).send("Bill creation failed");
+    cconst r = await axios.post(
+  `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
+  billPayload,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    }
   }
-});
+);
 
 app.get("/qb/accounts", async (req, res) => {
   try {
@@ -196,7 +190,10 @@ app.get("/qb/accounts", async (req, res) => {
     const r = await axios.get(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
-        params: { query: "select Id, Name, AccountType from Account" },
+        params: {
+          query: "select Id, Name, AccountType from Account",
+          minorversion: 65
+        },
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json"
