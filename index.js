@@ -167,15 +167,17 @@ app.post("/qb/bills", express.json(), async (req, res) => {
 
     const billPayload = {
       VendorRef: { value: vendorId },
-      APAccountRef: { value: "33" }, // Accounts Payable
+      APAccountRef: { value: "33" },                 // Accounts Payable
+      CurrencyRef: { value: "USD" },                 // REQUIRED in sandbox
       TxnDate: new Date().toISOString().split("T")[0],
+
       Line: [
         {
           Amount: Number(amount),
           DetailType: "AccountBasedExpenseLineDetail",
           Description: memo || "Maneframe Trucking",
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "80" }
+            AccountRef: { value: "28" }               // Disposal Fees (Expense)
           }
         }
       ]
@@ -195,7 +197,7 @@ app.post("/qb/bills", express.json(), async (req, res) => {
 
     res.json(qbRes.data);
   } catch (e) {
-    console.error("QB BILL ERROR:", e.response?.data || e.message);
+    console.error("QB BILL ERROR FULL:", JSON.stringify(e.response?.data || e.message, null, 2));
     res.status(500).send("Bill creation failed");
   }
 });
