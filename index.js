@@ -188,6 +188,31 @@ app.post("/qb/bills", express.json(), async (req, res) => {
   }
 });
 
+app.get("/__version", (req, res) => {
+  res.json({
+    ok: true,
+    service: "mf-finance-bridge",
+    renderCommit: process.env.RENDER_GIT_COMMIT || null,
+    node: process.version,
+    time: new Date().toISOString()
+  });
+});
+
+app.get("/__routes", (req, res) => {
+  const routes = [];
+  try {
+    app._router.stack.forEach((layer) => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods)
+          .filter((m) => layer.route.methods[m])
+          .map((m) => m.toUpperCase());
+        routes.push({ path: layer.route.path, methods });
+      }
+    });
+  } catch (e) {}
+  res.json({ count: routes.length, routes });
+});
+
 /* ===============================
    SERVER START
 =================================*/
