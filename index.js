@@ -213,6 +213,10 @@ app.get("/__routes", (req, res) => {
   res.json({ count: routes.length, routes });
 });
 
+app.get("/__ping", (req, res) => {
+  res.json({ ok: true, ping: "pong", time: new Date().toISOString() });
+});
+
 /* ===============================
    SERVER START
 =================================*/
