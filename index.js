@@ -188,6 +188,29 @@ app.post("/qb/bills", express.json(), async (req, res) => {
   }
 });
 
+app.get("/qb/accounts", async (req, res) => {
+  try {
+    const token = await getQBAccessToken();
+    const realm = process.env.QB_REALM_ID;
+
+    const r = await axios.get(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
+      {
+        params: { query: "select Id, Name, AccountType from Account" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    res.json(r.data.QueryResponse.Account || []);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Account lookup failed");
+  }
+});
+
 /* ===============================
    SERVER START
 =================================*/
