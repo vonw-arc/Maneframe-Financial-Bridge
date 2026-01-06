@@ -139,7 +139,10 @@ app.get("/qb/accounts", async (_, res) => {
     const r = await axios.get(
       `https://quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
-        params: { query: "select Id, Name, AccountType from Account", minorversion: 65 },
+        params: {
+  query: "select Id, Name, AccountType from Account where Active = true",
+  minorversion: 65
+},
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
       }
     );
