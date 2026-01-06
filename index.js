@@ -9,7 +9,7 @@ app.use(express.json());               // ← global JSON middleware (v5 safe)
 const port = process.env.PORT || 3000;
 
 /* ===============================
-   QB TOKEN ENGINE
+   QB TOKEN ENGINE (PERSISTENT)
 =================================*/
 
 function loadQBToken() {
@@ -27,9 +27,15 @@ function saveQBToken(t) {
 }
 
 async function getQBAccessToken() {
-  let t = loadQBToken();
+  const t = loadQBToken();
 
-  if (t.access_token && Date.now() < t.expires_at) return t.access_token;
+  if (t.access_token && Date.now() < t.expires_at) {
+    return t.access_token;
+  }
+
+  if (!t.refresh_token) {
+    throw new Error("QB not authorized – no refresh token stored.");
+  }
 
   const r = await axios.post(
     "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
@@ -41,7 +47,9 @@ async function getQBAccessToken() {
       headers: {
         Authorization:
           "Basic " +
-          Buffer.from(process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET).toString("base64"),
+          Buffer.from(
+            process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET
+          ).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded"
       }
     }
@@ -109,7 +117,7 @@ app.get("/auth/qb/callback", async (req, res) => {
   access_token: r.data.access_token,
   refresh_token: r.data.refresh_token,
   expires_at: Date.now() + r.data.expires_in * 1000
-  });
+});
 
     res.send("QB Connected Successfully 🦾 You may close this window.");
   } catch (e) {
