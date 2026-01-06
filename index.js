@@ -203,11 +203,11 @@ app.post("/qb/bills", async (req, res) => {
     res.json(qbRes.data);
 
   } catch (e) {
-    console.log("====== LOCAL ERROR ======");
-    console.log(e.message);
-    console.log("=========================");
-    res.status(500).send("Local failure");
-  }
+  console.log("====== LOCAL ERROR ======");
+  console.log(e);
+  console.log("=========================");
+  res.status(500).json({ ok:false, error: e.message });
+}
 });
 
 /* ===============================
