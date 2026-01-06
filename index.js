@@ -115,15 +115,33 @@ app.get("/qb/vendors", async (_, res) => {
     const token = await getQBAccessToken();
     const realm = process.env.QB_REALM_ID;
 
-    const r = await axios.get(
-      `https://quickbooks.api.intuit.com/v3/company/${realm}/query`,
-      {
-        params: { query: "select Id, DisplayName from Vendor", minorversion: 65 },
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      }
-    );
+    let all = [];
+    let start = 1;
+    const pageSize = 1000;
 
-    res.json(r.data.QueryResponse.Vendor || []);
+    while (true) {
+      const r = await axios.get(
+        `https://quickbooks.api.intuit.com/v3/company/${realm}/query`,
+        {
+          params: {
+            query: `select Id, DisplayName from Vendor STARTPOSITION ${start} MAXRESULTS ${pageSize}`,
+            minorversion: 65
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json"
+          }
+        }
+      );
+
+      const batch = r.data.QueryResponse.Vendor || [];
+      if (!batch.length) break;
+
+      all.push(...batch);
+      start += pageSize;
+    }
+
+    res.json(all);
   } catch (e) {
     console.error(e.response?.data || e.message);
     res.status(500).send("Vendor query failed");
