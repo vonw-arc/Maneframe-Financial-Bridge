@@ -212,6 +212,28 @@ app.post("/qb/bills", async (req, res) => {
 }
 });
 
+app.get("/qb/company-prefs", async (_, res) => {
+  try {
+    const token = await getQBAccessToken();
+    const realm = process.env.QB_REALM_ID;
+
+    const r = await axios.get(
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/preferences?minorversion=65`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    res.json(r.data);
+  } catch (e) {
+    console.error(e.response?.data || e.message);
+    res.status(500).send("Preferences lookup failed");
+  }
+});
+
 /* ===============================
    START
 =================================*/
