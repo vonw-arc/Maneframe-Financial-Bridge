@@ -158,56 +158,55 @@ app.post("/qb/bills", async (req, res) => {
   try {
     const { vendorId, amount, memo } = req.body;
 
-    if (!vendorId || !amount) {
-      return res.status(400).send("vendorId and amount required");
-    }
-
     const token = await getQBAccessToken();
     const realm = process.env.QB_REALM_ID;
 
     const billPayload = {
-  VendorRef: { value: vendorId },
-  APAccountRef: { value: "33" },
-  TxnDate: new Date().toISOString().split("T")[0],
-  CurrencyRef: { value: "USD" },
+      VendorRef: { value: vendorId },
+      APAccountRef: { value: "33" },
+      TxnDate: new Date().toISOString().split("T")[0],
+      CurrencyRef: { value: "USD" },
 
-  SalesTermRef: { value: "3" },   // ← REQUIRED sandbox term
+      Line: [
+        {
+          DetailType: "AccountBasedExpenseLineDetail",
+          Amount: Number(amount),
+          Description: memo || "Maneframe Diagnostic",
+          AccountBasedExpenseLineDetail: {
+            AccountRef: { value: "28" }
+          }
+        }
+      ]
+    };
 
-  Line: [
-    {
-      DetailType: "AccountBasedExpenseLineDetail",
-      Amount: Number(amount),
-      Description: memo || "Maneframe Trucking",
-
-      AccountBasedExpenseLineDetail: {
-        AccountRef: { value: "28" }
-      }
-    }
-  ]
-};
+    console.log("====== BILL PAYLOAD ======");
+    console.log(JSON.stringify(billPayload, null, 2));
+    console.log("==========================");
 
     const qbRes = await axios.post(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
       billPayload,
       {
         headers: {
-     Authorization: `Bearer ${token}`,
-     "Content-Type": "application/json",
-     Accept: "application/json"
-	}
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        validateStatus: () => true
       }
     );
 
+    console.log("====== QB RAW RESPONSE ======");
+    console.log(JSON.stringify(qbRes.data, null, 2));
+    console.log("=============================");
+
     res.json(qbRes.data);
+
   } catch (e) {
-    console.log("====== QB RAW ERROR ======");
-    console.log(JSON.stringify(e.response?.data, null, 2));
-    console.log("==========================");
-    res.status(500).json({
-      ok: false,
-      qb: e.response?.data || null,
-      msg: e.message
-    });
+    console.log("====== LOCAL ERROR ======");
+    console.log(e.message);
+    console.log("=========================");
+    res.status(500).send("Local failure");
   }
 });
 
