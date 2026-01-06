@@ -166,32 +166,33 @@ app.post("/qb/bills", async (req, res) => {
     const realm = process.env.QB_REALM_ID;
 
     const billPayload = {
-      VendorRef: { value: vendorId },
-      APAccountRef: { value: "33" },                 // Accounts Payable
-      CurrencyRef: { value: "USD" },                 // REQUIRED in sandbox
-      TxnDate: new Date().toISOString().split("T")[0],
+  VendorRef: { value: vendorId },
+  APAccountRef: { value: "33" },        // A/P account
+  TxnDate: new Date().toISOString().split("T")[0],
+  CurrencyRef: { value: "USD" },
 
-      Line: [
-        {
-          Amount: Number(amount),
-          DetailType: "AccountBasedExpenseLineDetail",
-          Description: memo || "Maneframe Trucking",
-          AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "28" }               // Disposal Fees (Expense)
-          }
-        }
-      ]
-    };
+  Line: [
+    {
+      DetailType: "AccountBasedExpenseLineDetail",
+      Amount: Number(amount),
+      Description: memo || "Maneframe Trucking",
+
+      AccountBasedExpenseLineDetail: {
+        AccountRef: { value: "28" }     // Disposal Fees (Expense)
+      }
+    }
+  ]
+};
 
     const qbRes = await axios.post(
       `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
       billPayload,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        }
+     Authorization: `Bearer ${token}`,
+     "Content-Type": "application/json",
+     Accept: "application/json"
+	}
       }
     );
 
