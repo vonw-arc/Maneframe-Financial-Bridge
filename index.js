@@ -167,9 +167,11 @@ app.post("/qb/bills", async (req, res) => {
 
     const billPayload = {
   VendorRef: { value: vendorId },
-  APAccountRef: { value: "33" },        // A/P account
+  APAccountRef: { value: "33" },
   TxnDate: new Date().toISOString().split("T")[0],
   CurrencyRef: { value: "USD" },
+
+  SalesTermRef: { value: "3" },   // ← REQUIRED sandbox term
 
   Line: [
     {
@@ -178,7 +180,7 @@ app.post("/qb/bills", async (req, res) => {
       Description: memo || "Maneframe Trucking",
 
       AccountBasedExpenseLineDetail: {
-        AccountRef: { value: "28" }     // Disposal Fees (Expense)
+        AccountRef: { value: "28" }
       }
     }
   ]
