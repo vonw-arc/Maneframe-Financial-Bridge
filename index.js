@@ -117,7 +117,7 @@ app.get("/qb/vendors", async (_, res) => {
     const realm = process.env.QB_REALM_ID;
 
     const r = await axios.get(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
+      `https://quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
         params: { query: "select Id, DisplayName from Vendor", minorversion: 65 },
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
@@ -137,7 +137,7 @@ app.get("/qb/accounts", async (_, res) => {
     const realm = process.env.QB_REALM_ID;
 
     const r = await axios.get(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/query`,
+      `https://quickbooks.api.intuit.com/v3/company/${realm}/query`,
       {
         params: { query: "select Id, Name, AccountType from Account", minorversion: 65 },
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
@@ -184,7 +184,7 @@ app.post("/qb/bills", async (req, res) => {
     console.log("==========================");
 
     const qbRes = await axios.post(
-  `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
+  `https://quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
   billPayload,
   {
     headers: {
@@ -218,7 +218,7 @@ app.get("/qb/company-prefs", async (_, res) => {
     const realm = process.env.QB_REALM_ID;
 
     const r = await axios.get(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/preferences?minorversion=65`,
+      `https://quickbooks.api.intuit.com/v3/company/${realm}/preferences?minorversion=65`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -232,6 +232,15 @@ app.get("/qb/company-prefs", async (_, res) => {
     console.error(e.response?.data || e.message);
     res.status(500).send("Preferences lookup failed");
   }
+});
+
+app.get("/legal/eula", (_, res) => res.send("Maneframe Internal Use EULA"));
+app.get("/legal/privacy", (_, res) => res.send("Maneframe Internal Use Privacy Policy"));
+app.get("/legal/terms", (_, res) => res.send("Maneframe Internal Use Terms of Service"));
+
+app.get("/qb/disconnect", (_, res) => {
+  qbTokenStore = { access_token: null, refresh_token: null, expires_at: 0 };
+  res.send("Disconnected.");
 });
 
 /* ===============================
