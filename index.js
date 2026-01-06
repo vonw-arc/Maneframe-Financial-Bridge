@@ -184,17 +184,19 @@ app.post("/qb/bills", async (req, res) => {
     console.log("==========================");
 
     const qbRes = await axios.post(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
-      billPayload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json"
-        },
-        validateStatus: () => true
-      }
-    );
+  `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}/bill?minorversion=65`,
+  billPayload,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+    validateStatus: () => true      // <–– force axios to return body even on 400
+  }
+);
+
+   return res.json(qbRes.data);
 
     console.log("====== QB RAW RESPONSE ======");
     console.log(JSON.stringify(qbRes.data, null, 2));
