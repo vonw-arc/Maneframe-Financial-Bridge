@@ -19,11 +19,6 @@ let qbTokenStore = {
 };
 
 async function getQBAccessToken() {
-  if (process.env.QB_FORCE_REAUTH === "true") {
-    qbTokenStore = { access_token:null, refresh_token:null, expires_at:0 };
-    throw new Error("FORCE_REAUTH");
-  }
-
   if (qbTokenStore.access_token && Date.now() < qbTokenStore.expires_at) {
     return qbTokenStore.access_token;
   }
@@ -32,7 +27,7 @@ async function getQBAccessToken() {
     "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
     qs.stringify({
       grant_type: "refresh_token",
-      refresh_token: qbTokenStore.refresh_token
+      refresh_token: qbTokenStore.refresh_token || process.env.QB_REFRESH_TOKEN
     }),
     {
       headers: {
@@ -98,9 +93,11 @@ app.get("/auth/qb/callback", async (req, res) => {
       }
     );
 
-    qbTokenStore.access_token = r.data.access_token;
-    qbTokenStore.refresh_token = r.data.refresh_token;
-    qbTokenStore.expires_at = Date.now() + r.data.expires_in * 1000;
+    	qbTokenStore.access_token = r.data.access_token;
+	qbTokenStore.refresh_token = r.data.refresh_token;
+	qbTokenStore.expires_at   = Date.now() + r.data.expires_in * 1000;
+
+	process.env.QB_REFRESH_TOKEN = r.data.refresh_token;
 
     res.send("QB Connected Successfully 🦾 You may close this window.");
   } catch (e) {
