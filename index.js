@@ -19,6 +19,11 @@ let qbTokenStore = {
 };
 
 async function getQBAccessToken() {
+  if (process.env.QB_FORCE_REAUTH === "true") {
+    qbTokenStore = { access_token:null, refresh_token:null, expires_at:0 };
+    throw new Error("FORCE_REAUTH");
+  }
+
   if (qbTokenStore.access_token && Date.now() < qbTokenStore.expires_at) {
     return qbTokenStore.access_token;
   }
@@ -33,9 +38,7 @@ async function getQBAccessToken() {
       headers: {
         Authorization:
           "Basic " +
-          Buffer.from(
-            process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET
-          ).toString("base64"),
+          Buffer.from(process.env.QB_CLIENT_ID + ":" + process.env.QB_CLIENT_SECRET).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded"
       }
     }
@@ -44,7 +47,6 @@ async function getQBAccessToken() {
   qbTokenStore.access_token = r.data.access_token;
   qbTokenStore.refresh_token = r.data.refresh_token;
   qbTokenStore.expires_at = Date.now() + r.data.expires_in * 1000;
-
   return qbTokenStore.access_token;
 }
 
