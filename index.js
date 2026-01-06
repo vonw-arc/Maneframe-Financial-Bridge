@@ -12,22 +12,30 @@ const port = process.env.PORT || 3000;
    QB TOKEN ENGINE
 =================================*/
 
-let qbTokenStore = {
-  access_token: null,
-  refresh_token: null,
-  expires_at: 0
-};
+function loadQBToken() {
+  return {
+    access_token: process.env.QB_ACCESS_TOKEN || null,
+    refresh_token: process.env.QB_REFRESH_TOKEN || null,
+    expires_at: Number(process.env.QB_TOKEN_EXPIRES || 0)
+  };
+}
+
+function saveQBToken(t) {
+  process.env.QB_ACCESS_TOKEN  = t.access_token;
+  process.env.QB_REFRESH_TOKEN = t.refresh_token;
+  process.env.QB_TOKEN_EXPIRES = String(t.expires_at);
+}
 
 async function getQBAccessToken() {
-  if (qbTokenStore.access_token && Date.now() < qbTokenStore.expires_at) {
-    return qbTokenStore.access_token;
-  }
+  let t = loadQBToken();
+
+  if (t.access_token && Date.now() < t.expires_at) return t.access_token;
 
   const r = await axios.post(
     "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
     qs.stringify({
       grant_type: "refresh_token",
-      refresh_token: qbTokenStore.refresh_token || process.env.QB_REFRESH_TOKEN
+      refresh_token: t.refresh_token
     }),
     {
       headers: {
@@ -39,10 +47,14 @@ async function getQBAccessToken() {
     }
   );
 
-  qbTokenStore.access_token = r.data.access_token;
-  qbTokenStore.refresh_token = r.data.refresh_token;
-  qbTokenStore.expires_at = Date.now() + r.data.expires_in * 1000;
-  return qbTokenStore.access_token;
+  const updated = {
+    access_token: r.data.access_token,
+    refresh_token: r.data.refresh_token,
+    expires_at: Date.now() + r.data.expires_in * 1000
+  };
+
+  saveQBToken(updated);
+  return updated.access_token;
 }
 
 /* ===============================
@@ -93,11 +105,11 @@ app.get("/auth/qb/callback", async (req, res) => {
       }
     );
 
-    	qbTokenStore.access_token = r.data.access_token;
-	qbTokenStore.refresh_token = r.data.refresh_token;
-	qbTokenStore.expires_at   = Date.now() + r.data.expires_in * 1000;
-
-	process.env.QB_REFRESH_TOKEN = r.data.refresh_token;
+    	saveQBToken({
+  access_token: r.data.access_token,
+  refresh_token: r.data.refresh_token,
+  expires_at: Date.now() + r.data.expires_in * 1000
+  });
 
     res.send("QB Connected Successfully 🦾 You may close this window.");
   } catch (e) {
@@ -259,7 +271,7 @@ app.get("/legal/privacy", (_, res) => res.send("Maneframe Internal Use Privacy P
 app.get("/legal/terms", (_, res) => res.send("Maneframe Internal Use Terms of Service"));
 
 app.get("/qb/disconnect", (_, res) => {
-  qbTokenStore = { access_token: null, refresh_token: null, expires_at: 0 };
+  saveQBToken({ access_token:null, refresh_token:null, expires_at:0 });
   res.send("Disconnected.");
 });
 
