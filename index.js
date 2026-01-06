@@ -166,7 +166,7 @@ app.post("/qb/bills", async (req, res) => {
 
     const billPayload = {
       VendorRef: { value: vendorId },
-      APAccountRef: { value: "33" },
+      APAccountRef: { value: "64" },
       TxnDate: new Date().toISOString().split("T")[0],
       CurrencyRef: { value: "USD" },
 
@@ -176,7 +176,7 @@ app.post("/qb/bills", async (req, res) => {
           Amount: Number(amount),
           Description: memo || "Maneframe Diagnostic",
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: "28" }
+            AccountRef: { value: "94" }
           }
         }
       ]
