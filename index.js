@@ -4,6 +4,9 @@ const axios = require("axios");
 const crypto = require("crypto");
 const qs = require("qs");
 
+const fs = require("fs");
+const TOKEN_FILE = "/opt/render/project/src/qb_tokens.json";
+
 const app = express();
 app.use(express.json());               // ← global JSON middleware (v5 safe)
 const port = process.env.PORT || 3000;
@@ -13,17 +16,15 @@ const port = process.env.PORT || 3000;
 =================================*/
 
 function loadQBToken() {
-  return {
-    access_token: process.env.QB_ACCESS_TOKEN || null,
-    refresh_token: process.env.QB_REFRESH_TOKEN || null,
-    expires_at: Number(process.env.QB_TOKEN_EXPIRES || 0)
-  };
+  try {
+    return JSON.parse(fs.readFileSync(TOKEN_FILE, "utf8"));
+  } catch {
+    return { access_token:null, refresh_token:null, expires_at:0 };
+  }
 }
 
 function saveQBToken(t) {
-  process.env.QB_ACCESS_TOKEN  = t.access_token;
-  process.env.QB_REFRESH_TOKEN = t.refresh_token;
-  process.env.QB_TOKEN_EXPIRES = String(t.expires_at);
+  fs.writeFileSync(TOKEN_FILE, JSON.stringify(t, null, 2));
 }
 
 async function getQBAccessToken() {
